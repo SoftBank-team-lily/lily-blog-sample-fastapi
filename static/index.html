@@ -12,7 +12,13 @@
   header { text-align: center; margin-bottom: 40px; }
   svg { width: 72px; height: 72px; color: var(--lily); }
   h1 { font-size: 20px; font-weight: 600; margin: 12px 0 0; letter-spacing: .02em; }
-  form { display: grid; gap: 10px; margin-bottom: 40px; }
+  .toggle { display: block; margin: 0 auto 24px; background: transparent; color: var(--fg); border: 1px solid var(--line); padding: 8px 20px; border-radius: 999px; font-weight: 500; }
+  .toggle:hover { border-color: var(--muted); }
+  .composer { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .35s ease, opacity .35s ease, margin .35s ease; }
+  .composer.open { grid-template-rows: 1fr; opacity: 1; margin-bottom: 40px; }
+  .composer > div { overflow: hidden; }
+  @media (prefers-reduced-motion: reduce) { .composer { transition: none; } }
+  form { display: grid; gap: 10px; padding: 2px; }
   input, textarea { width: 100%; background: transparent; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: inherit; }
   textarea { min-height: 110px; resize: vertical; }
   input:focus, textarea:focus { outline: none; border-color: var(--muted); }
@@ -42,17 +48,33 @@
     <h1>Lily Blog</h1>
   </header>
 
-  <form id="form">
-    <input id="title" placeholder="제목" maxlength="120" required>
-    <textarea id="body" placeholder="내용" maxlength="5000" required></textarea>
-    <button id="submit">글쓰기</button>
-    <div class="error" id="error"></div>
-  </form>
+  <button class="toggle" id="toggle" type="button" aria-expanded="false" aria-controls="composer">글쓰기</button>
+
+  <div class="composer" id="composer">
+    <div>
+      <form id="form">
+        <input id="title" placeholder="제목" maxlength="120" required tabindex="-1">
+        <textarea id="body" placeholder="내용" maxlength="5000" required tabindex="-1"></textarea>
+        <button id="submit" tabindex="-1">올리기</button>
+        <div class="error" id="error"></div>
+      </form>
+    </div>
+  </div>
 
   <section id="posts"></section>
 </main>
 <script>
   const $ = (id) => document.getElementById(id);
+
+  function setOpen(open) {
+    $("composer").classList.toggle("open", open);
+    $("toggle").setAttribute("aria-expanded", open);
+    $("toggle").textContent = open ? "닫기" : "글쓰기";
+    for (const el of $("form").elements) el.tabIndex = open ? 0 : -1;
+    if (open) $("title").focus({ preventScroll: true });
+  }
+
+  $("toggle").addEventListener("click", () => setOpen(!$("composer").classList.contains("open")));
 
   async function load() {
     const res = await fetch("/api/posts");
@@ -92,6 +114,7 @@
       });
       if (!res.ok) throw new Error();
       $("form").reset();
+      setOpen(false);
       await load();
     } catch {
       $("error").textContent = "글을 저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요.";
